@@ -200,7 +200,8 @@ def main():
             data_dict = loader.download_all_timeframes()
             
             # Check if we have all required data
-            if not all(data_dict.values()):
+            #if not all(data_dict.values()):
+            if any(df is None or df.empty for df in data_dict.values()):
                 print(f"Skipping {ticker} - incomplete data")
                 continue
             

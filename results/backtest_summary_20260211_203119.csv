@@ -1,0 +1,2 @@
+ticker,final_value,sharpe,max_drawdown,total_return,total_trades,won_trades,lost_trades
+USDCAD=X,99997.71330759094,-1975.1027024078764,0.003150350799758977,-2.2867185542686527e-05,1,0,1

@@ -55,7 +55,7 @@ class DataLoader:
                     end_dt = end_date
                 
                 # Calculate 60 days before end_date
-                start_dt = end_dt - timedelta(days=60)
+                start_dt = end_dt - timedelta(days=50)
                 
                 # Format back to string
                 start_date = start_dt.strftime('%Y-%m-%d')
@@ -68,9 +68,8 @@ class DataLoader:
                 self.ticker,
                 start=start_date,
                 end=end_date,
-                interval=interval,
-                progress=False,
-                multi_level_index =False
+                interval=interval,            
+                multi_level_index=False                
             )
             
             if data.empty:
@@ -164,7 +163,7 @@ class DataLoader:
         if df_1h is None or df_1h.empty:
             return None
             
-        df_4h = df_1h.resample('4H').agg({
+        df_4h = df_1h.resample('4h').agg({
             'Open': 'first',
             'High': 'max',
             'Low': 'min',

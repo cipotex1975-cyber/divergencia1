@@ -40,7 +40,7 @@ class MultiTimeframeStrategy(bt.Strategy):
         self.data_4h = self.datas[2] if len(self.datas) > 2 else None
         
         # MACD indicator on 1H data
-        if self.data_1h:
+        if self.data_1h is not None:
             self.macd = bt.indicators.MACD(
                 self.data_1h.close,
                 period_me1=self.params.macd_fast,
@@ -63,6 +63,10 @@ class MultiTimeframeStrategy(bt.Strategy):
         
         # Signal log
         self.signals = []
+        
+        # Track processed divergences to prevent duplicate chart generation
+        # Stores tuples of (signal_type, pivot_timestamp) for already processed divergences
+        self.processed_divergences = set()
         
         # Chart generator (get ticker from data feed name if available)
         ticker = getattr(self.data_15m, '_name', 'UNKNOWN')
@@ -157,29 +161,65 @@ class MultiTimeframeStrategy(bt.Strategy):
         """
         
         # Step 1 & 2: Check 4H support/resistance
-        if self.data_4h and len(self.data_4h) > self.params.sr_lookback:
+        if self.data_4h is not None and len(self.data_4h) > self.params.sr_lookback:
             self._update_sr_levels()
             near_support, near_resistance = self._check_proximity_to_sr()
         else:
             return
         
         # Step 3: Check for MACD divergence on 1H
-        if self.data_1h and len(self.data_1h) > 50:
+        if self.data_1h is not None and len(self.data_1h) > 50:
             if near_support:
-                bullish_div = self._detect_bullish_divergence()
+                bullish_div, pivot_points = self._detect_bullish_divergence()
                 if bullish_div and not self.divergence_detected:
-                    self.log('BULLISH DIVERGENCE DETECTED near SUPPORT')
-                    self.signal_type = 'bullish'
-                    self.divergence_detected = True
-                    self._identify_entry_level_bullish()
+                    # Create unique identifier for this divergence using pivot timestamps
+                    if len(pivot_points) >= 2:
+                        # Convert relative indices to absolute timestamps
+                        prev_idx_rel = pivot_points[1][0]  # Older point
+                        curr_idx_rel = pivot_points[0][0]  # Newer point
+                        prev_timestamp = self.data_1h.datetime.datetime(-prev_idx_rel)
+                        curr_timestamp = self.data_1h.datetime.datetime(-curr_idx_rel)
+                        divergence_id = ('bullish', prev_timestamp, curr_timestamp)
+                        
+                        # Only process if we haven't seen this exact divergence before
+                        if divergence_id not in self.processed_divergences:
+                            self.log('BULLISH DIVERGENCE DETECTED near SUPPORT')
+                            self.signal_type = 'bullish'
+                            self.divergence_detected = True
+                            self._identify_entry_level_bullish()
+                            
+                            # Generate chart only once for this specific divergence
+                            if self.chart_generator:
+                                self._generate_signal_chart('bullish', pivot_points)
+                            
+                            # Mark this divergence as processed
+                            self.processed_divergences.add(divergence_id)
             
             if near_resistance:
-                bearish_div = self._detect_bearish_divergence()
+                bearish_div, pivot_points = self._detect_bearish_divergence()
                 if bearish_div and not self.divergence_detected:
-                    self.log('BEARISH DIVERGENCE DETECTED near RESISTANCE')
-                    self.signal_type = 'bearish'
-                    self.divergence_detected = True
-                    self._identify_entry_level_bearish()
+                    # Create unique identifier for this divergence using pivot timestamps
+                    if len(pivot_points) >= 2:
+                        # Convert relative indices to absolute timestamps
+                        prev_idx_rel = pivot_points[1][0]  # Older point
+                        curr_idx_rel = pivot_points[0][0]  # Newer point
+                        prev_timestamp = self.data_1h.datetime.datetime(-prev_idx_rel)
+                        curr_timestamp = self.data_1h.datetime.datetime(-curr_idx_rel)
+                        divergence_id = ('bearish', prev_timestamp, curr_timestamp)
+                        
+                        # Only process if we haven't seen this exact divergence before
+                        if divergence_id not in self.processed_divergences:
+                            self.log('BEARISH DIVERGENCE DETECTED near RESISTANCE')
+                            self.signal_type = 'bearish'
+                            self.divergence_detected = True
+                            self._identify_entry_level_bearish()
+                            
+                            # Generate chart only once for this specific divergence
+                            if self.chart_generator:
+                                self._generate_signal_chart('bearish', pivot_points)
+                            
+                            # Mark this divergence as processed
+                            self.processed_divergences.add(divergence_id)
         
         # Step 5: Execute entry on 15M if we have a signal
         if self.divergence_detected and self.entry_level:
@@ -270,17 +310,14 @@ class MultiTimeframeStrategy(bt.Strategy):
         
         # Need at least 2 lows to compare
         if len(price_lows) < 2:
-            return False
+            return False, []
         
         # Check if price making lower low but MACD making higher low
         if (price_lows[0][1] < price_lows[1][1] and 
             macd_lows[0][1] > macd_lows[1][1]):
-            # Generate chart if enabled
-            if self.chart_generator:
-                self._generate_signal_chart('bullish', price_lows)
-            return True
+            return True, price_lows
         
-        return False
+        return False, []
     
     def _detect_bearish_divergence(self):
         """Detect bearish MACD divergence on 1H"""
@@ -301,17 +338,14 @@ class MultiTimeframeStrategy(bt.Strategy):
         
         # Need at least 2 highs to compare
         if len(price_highs) < 2:
-            return False
+            return False, []
         
         # Check if price making higher high but MACD making lower high
         if (price_highs[0][1] > price_highs[1][1] and 
             macd_highs[0][1] < macd_highs[1][1]):
-            # Generate chart if enabled
-            if self.chart_generator:
-                self._generate_signal_chart('bearish', price_highs)
-            return True
+            return True, price_highs
         
-        return False
+        return False, []
     
     def _identify_entry_level_bullish(self):
         """Identify entry level for bullish setup (break above last high)"""
