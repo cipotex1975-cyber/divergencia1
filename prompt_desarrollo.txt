@@ -1,0 +1,95 @@
+Actúa como un desarrollador cuantitativo senior especializado en trading algorítmico con Python.
+
+Diseña y desarrolla una estrategia de trading utilizando Backtrader, cumpliendo estrictamente con los siguientes requisitos:
+
+1. Tecnologías y librerías
+
+El desarrollo debe hacerse en Python.
+
+Utilizar Backtrader para el backtesting de la estrategia.
+
+Usar yfinance para la descarga de datos históricos.
+
+2. Entrada de activos
+
+Los activos (pares, tickers o símbolos) deben cargarse desde un archivo externo (por ejemplo .txt o .csv).
+
+El sistema debe iterar automáticamente sobre todos los activos listados.
+
+3. Marco temporal y análisis técnico
+
+Descargar datos históricos en los siguientes timeframes:
+
+4 horas (4H)
+
+1 hora (1H)
+
+15 minutos (15M)
+
+En el timeframe de 4H:
+
+Detectar y marcar niveles de soporte y resistencia relevantes (puede ser usando swing highs/lows, pivots o un método técnico justificable).
+
+4. Condición de contexto (4H + 1H)
+
+Evaluar si el precio actual se encuentra cerca de un soporte o resistencia identificado en 4H (definir un umbral porcentual o en ATR).
+
+Si esta condición se cumple, analizar el timeframe de 1H:
+
+Detectar divergencias del MACD (alcistas y bajistas).
+
+Si existe:
+
+Precio cerca de soporte o resistencia (4H)
+
+Divergencia válida en MACD (1H)
+
+→ Generar una alarma/señal de preparación y continuar al siguiente paso.
+
+5. Identificación de niveles clave para entrada
+
+Cuando haya divergencia en 1H cerca de soporte/resistencia:
+
+En tendencia bajista:
+
+Identificar el último máximo relevante que deba romperse.
+
+En tendencia alcista:
+
+Identificar el último mínimo relevante que deba romperse.
+
+Estos niveles deben:
+
+Marcarse visualmente en la gráfica.
+
+Guardarse como niveles potenciales de entrada.
+
+6. Ejecución de la entrada
+
+La entrada final al mercado debe ejecutarse únicamente en el timeframe de 15 minutos.
+
+La lógica de entrada debe confirmar la ruptura del nivel previamente identificado.
+
+7. Resultados esperados
+
+Código bien estructurado y comentado.
+
+Separación clara entre:
+
+Descarga de datos
+
+Cálculo de indicadores
+
+Lógica de estrategia
+
+Backtesting
+
+Mostrar ejemplos de:
+
+Señales detectadas
+
+Entradas realizadas
+
+Resultados del backtest
+
+Antes de escribir el código final, explica brevemente la lógica general de la estrategia y las decisiones técnicas tomadas.
